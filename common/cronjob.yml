@@ -37,7 +37,7 @@ spec:
                   fi
 
                   echo "Running the backup command with the following config..."
-                  # rustic -P rustic-base -P rustic show-config
+                  # rustic -P rustic-base -P rustic show-config  # WARNING: Shows the password in the logs!
                   rustic -P rustic-base -P rustic ${rustic_cmd} | tee /tmp/backup.log
 
                   # Rustic does not set exit codes, so grep for errors... https://github.com/rustic-rs/rustic/issues/927

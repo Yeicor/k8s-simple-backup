@@ -38,7 +38,7 @@ jobs:
       - name: Force a restore of the PV now (to the backup we just made)
         run: |
           kubectl create job -n testpv --from=cronjob/rustic-k8s-backup-cron-job rustic-k8s-backup-job-restore --dry-run=client -o "json" \
-            | jq ".spec.template.spec.containers[0].env += [{ \"name\": \"rustic_cmd\", value:\"restore --delete --verify-existing $saved_snapshot /data\" }]" \
+            | jq ".spec.template.spec.containers[0].env += [{ \"name\": \"rustic_cmd\", value:\"restore --delete --verify-existing $saved_snapshot /\" }]" \
             | kubectl apply -f -
           kubectl wait --timeout=5m --for=condition=complete job/rustic-k8s-backup-job-restore -n testpv
           kubectl logs -n testpv job/rustic-k8s-backup-job-restore
