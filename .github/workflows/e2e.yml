@@ -27,7 +27,7 @@ jobs:
           kubectl wait --timeout=5m --for=condition=complete job/rustic-k8s-backup-job -n testpv
           kubectl logs -n testpv job/rustic-k8s-backup-job | tee logs.txt
           saved_snapshot=$(grep "^snapshot " logs.txt | sed -E 's/^[^ ]* ([0-9a-fA-F]+) .*$/\1/g' | head -n 1)
-          rm logs.txt && echo "Saved snapshot: $saved_snapshot"
+          rm logs.txt && echo "saved_snapshot=$saved_snapshot" | tee /dev/stderr >> $GITHUB_ENV
           kubectl delete job rustic-k8s-backup-job -n testpv
 
       - name: Let the app run for a bit and print the logs
