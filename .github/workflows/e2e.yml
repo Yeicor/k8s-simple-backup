@@ -33,20 +33,23 @@ jobs:
       - name: Let the app run for a bit and print the logs
         run: |
           sleep 10
-          kubectl logs -n testpv -l app=testpv --tail 100
+          kubectl logs -n testpv -l app=testpv --tail 100 | tee future_logs.txt
 
       - name: Force a restore of the PV now (to the backup we just made)
         run: |
           kubectl create job -n testpv --from=cronjob/rustic-k8s-backup-cron-job rustic-k8s-backup-job-restore --dry-run=client -o "json" \
-            | jq ".spec.template.spec.containers[0].env += [{ \"name\": \"rustic_cmd\", value:\"restore --delete --verify-existing $saved_snapshot /\" }]" \
+            | jq ".spec.template.spec.containers[0].env += [{ \"name\": \"rustic_cmd\", value:\"restore --delete --verify-existing $saved_snapshot ./\" }]" \
             | kubectl apply -f -
           kubectl wait --timeout=5m --for=condition=complete job/rustic-k8s-backup-job-restore -n testpv
           kubectl logs -n testpv job/rustic-k8s-backup-job-restore
           kubectl delete job rustic-k8s-backup-job-restore -n testpv
 
-      - name: Print the logs again (should have gone back to the past!)
+      - name: Let the app run for a bit and print the logs (should have gone back to the past!)
         run: |
-          kubectl logs -n testpv -l app=testpv --tail 100
+          sleep 10
+          kubectl logs -n testpv -l app=testpv --tail 100 | tee past_logs.txt
+          # Ensure that the past logs partially match the future logs
+          grep -q -f future_logs.txt past_logs.txt
 
 
 

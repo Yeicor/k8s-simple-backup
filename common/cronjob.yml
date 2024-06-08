@@ -36,7 +36,8 @@ spec:
                     echo "No resource configured to scale down for backup. This is not recommended."
                   fi
 
-                  echo "Running the backup command with the following config..."
+                  echo "Running the backup command..."
+                  [ -d /data ] && cd /data
                   # rustic -P rustic-base -P rustic show-config  # WARNING: Shows the password in the logs!
                   rustic -P rustic-base -P rustic ${rustic_cmd} | tee /tmp/backup.log
 
