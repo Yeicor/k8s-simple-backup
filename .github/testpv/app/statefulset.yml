@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: testpv
+spec:
+  selector:
+    matchLabels:
+      app: testpv
+  template:
+    metadata:
+      labels:
+        app: testpv
+    spec:
+      containers:
+        - name: testpv
+          image: alpine:latest
+          command:
+            - /bin/sh
+            - -c
+            - |  # Use the PV at /custom/file to store a counter that is printed and incremented regularly
+              if [ ! -f /custom/file ]; then
+                echo "Counter file not found, creating it..."
+                echo "0" > /custom/file
+              fi
+              while true; do
+                echo "Incrementing counter from $(cat /custom/file)..."
+                echo $(( $(cat /custom/file) + 1 )) > /custom/file
+                sleep 1
+              done
+          volumeMounts:
+            - name: data
+              mountPath: /custom
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: testpv-pvc
+  serviceName: testpv-service

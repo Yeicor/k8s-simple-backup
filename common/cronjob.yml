@@ -1,0 +1,95 @@
+kind: CronJob
+apiVersion: batch/v1
+metadata:
+  name: rustic-k8s-backup-cron-job
+spec:
+  schedule: 0 0 * * *  # Default to every day at 0:00 AM UTC
+  timeZone: UTC
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: rustic-k8s-backup-service-account
+          restartPolicy: Never
+          containers:
+            - name: flux-k8s-backup
+              image: yeicor/rustic:main
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -ex
+
+                  if [ ! -z "${resource_kind}" ]; then
+                    echo "Installing kubectl to manage the ${resource_kind}/${resource_name} in the ${namespace:-default} namespace"
+                    curl -L -o /tmp/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+                    chmod +x /tmp/kubectl
+                    prev_replicas=$(/tmp/kubectl get ${resource_kind} -n ${namespace:-default} ${resource_name} -o jsonpath='{.spec.replicas}')
+                    echo "- The previous number of replicas was ${prev_replicas}, scaling down to 0 for backup..."
+                    /tmp/kubectl scale ${resource_kind} -n ${namespace:-default} ${resource_name} --replicas=0
+                    while [ "$(/tmp/kubectl get ${resource_kind} -n ${namespace:-default} ${resource_name} -o jsonpath='{.status.availableReplicas}')" -ne "0" ]; do
+                      echo "Waiting for ${resource_kind}/${resource_name} to scale down to 0 available replicas..."
+                      sleep 5
+                    done
+                  else
+                    echo "No resource configured to scale down for backup. This is not recommended."
+                  fi
+
+                  echo "Running the backup command with the following config..."
+                  # rustic -P rustic-base -P rustic show-config
+                  rustic -P rustic-base -P rustic ${rustic_cmd} | tee /tmp/backup.log
+
+                  # Rustic does not set exit codes, so grep for errors... https://github.com/rustic-rs/rustic/issues/927
+                  if grep -i -q "ERROR" /tmp/backup.log; then
+                    echo "Backup failed! Exiting..."
+                    exit 1
+                  fi
+
+                  if [ ! -z "${resource_kind}" ]; then
+                    echo "Backup successful! Scaling back ${resource_kind}/${resource_name} to ${prev_replicas} replicas..."
+                    cur_replicas=$(/tmp/kubectl get ${resource_kind} -n ${namespace:-default} ${resource_name} -o jsonpath='{.spec.replicas}')
+                    if [ "${cur_replicas}" -ne "0" ]; then
+                      echo "WARNING: The ${resource_kind}/${resource_name} is not currently scaled down to 0 replicas. Data may be corrupted!"
+                    fi
+                    /tmp/kubectl scale ${resource_kind} -n ${namespace:-default} ${resource_name} --replicas=${prev_replicas}
+                    while [ "$(/tmp/kubectl get ${resource_kind} -n ${namespace:-default} ${resource_name} -o jsonpath='{.status.availableReplicas}')" -ne "${prev_replicas}" ]; do
+                      echo "Waiting for ${resource_kind}/${resource_name} to scale up to ${prev_replicas} available replicas..."
+                      sleep 5
+                    done
+                  fi
+              volumeMounts:
+                - mountPath: /data
+                  name: data
+                - mountPath: /etc/rustic/
+                  name: config
+                - mountPath: /tmp
+                  name: tmp
+              envFrom:
+                - secretRef:
+                    name: rustic-secret-env
+                    optional: true
+                - configMapRef:
+                    name: rustic-configmap-env
+                    optional: true
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                seccompProfile:
+                  type: RuntimeDefault
+                # Use root to ensure all files are backed up
+                runAsNonRoot: true
+                runAsUser: 1000
+                runAsGroup: 1000
+          volumes:
+            - name: data
+              persistentVolumeClaim:
+                # readOnly: true  # May need to write for restore commands
+                claimName: YOU_MUST_OVERRIDE_THE_claimName_VALUE  # Replace using Kustomize patches
+            - name: config
+              configMap:
+                name: rustic-configmap
+            - name: tmp
+              emptyDir: { }

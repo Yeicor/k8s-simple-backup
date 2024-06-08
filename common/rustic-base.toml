@@ -1,0 +1,23 @@
+# Nice defaults that can be overridden by the user.
+# https://github.com/rustic-rs/rustic/blob/main/config/README.md
+
+[global]
+progress-interval = "1s"  # Show progress every second
+
+[repository]
+# repository = "rest:https://<your-repo>"  # Or any other supported backend
+# password = "SET THIS AS THE RUSTIC_PASSWORD ENVIRONMENT VARIABLE THROUGH A SECRET!"
+
+[forget]  # Set a default retention policy
+keep-within-hourly = "1d"
+keep-within-daily = "1w"
+keep-within-weekly = "1M"
+keep-within-monthly = "6M"
+keep-within-quarter-yearly = "1y"
+keep-within-half-yearly = "2y"
+keep-within-yearly = "5y"
+
+[[backup.sources]]
+init = true  # Initialize the repository if it doesn't exist
+source = "/data"
+#git-ignore = true

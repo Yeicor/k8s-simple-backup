@@ -1,0 +1,26 @@
+kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+namespace: testpv  # Same namespace as the app
+nameSuffix: -forget
+
+resources:
+  - ../backup
+
+configMapGenerator:
+  - name: rustic-configmap-env
+    behavior: merge
+    literals:
+      # Repository configuration
+      - rustic_cmd=forget --prune
+
+patches:
+  - target:
+      kind: CronJob
+      name: rustic-k8s-backup-cron-job  # Before applying the -forget suffix
+      version: v1
+      group: batch
+    patch: |-
+      - op: remove  # No need to mount the backup volume 
+        path: /spec/jobTemplate/spec/template/spec/containers/0/volumeMounts/0
+      - op: remove  # No need to mount the backup volume
+        path: /spec/jobTemplate/spec/template/spec/volumes/0

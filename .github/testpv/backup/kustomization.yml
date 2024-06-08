@@ -1,0 +1,51 @@
+kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+namespace: testpv  # Same namespace as the app
+
+resources:
+  - ../../../common
+  - claim.yml
+
+configMapGenerator:
+  - name: rustic-configmap-env
+    behavior: create
+    literals:
+      # Repository configuration
+      - rustic_cmd=backup --init
+      - RUSTIC_REPOSITORY=local:/backup
+      # Auto-scaling configuration
+      - resource_kind=statefulset
+      - resource_name=testpv
+      - namespace=testpv
+
+secretGenerator:
+  - name: rustic-secret-env
+    literals:
+      # Repository configuration
+      - RUSTIC_PASSWORD="DoNotUseThisPassword"
+
+patches:
+  - target:
+      kind: CronJob
+      name: rustic-k8s-backup-cron-job
+      version: v1
+      group: batch
+    patch: |-
+      - op: replace
+        path: /spec/jobTemplate/spec/template/spec/volumes/0/persistentVolumeClaim/claimName
+        value: testpv-pvc
+      - op: replace
+        path: /spec/suspend
+        value: false
+      # Add another persistent volume for the local backup (this is not required for remote backups)
+      - op: add
+        path: /spec/jobTemplate/spec/template/spec/volumes/-
+        value:
+          name: backup
+          persistentVolumeClaim:
+            claimName: testpv-backup-pvc
+      - op: add
+        path: /spec/jobTemplate/spec/template/spec/containers/0/volumeMounts/-
+        value:
+          mountPath: /backup
+          name: backup

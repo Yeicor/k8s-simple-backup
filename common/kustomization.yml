@@ -1,0 +1,12 @@
+kind: Kustomization
+apiVersion: kustomize.config.k8s.io/v1beta1
+
+resources:
+  - cronjob.yml
+  - service-account.yml
+
+configMapGenerator:
+  - name: rustic-configmap
+    behavior: create  # Can be merged to add a custom rustic.toml file!
+    files:
+      - rustic-base.toml

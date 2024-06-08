@@ -1,0 +1,52 @@
+name: e2e
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  kubernetes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: helm/kind-action@v1
+
+      - name: Start the testpv app, which will write to a new PersistentVolume (PV)
+        run: |
+          kubectl apply -k .github/testpv
+          kubectl wait --timeout=5m --for=condition=ready pod -l app=testpv -n testpv
+
+      - name: Force a backup of the PV now
+        run: |
+          kubectl create job --from=cronjob/rustic-k8s-backup-cron-job -n testpv rustic-k8s-backup-job
+          kubectl wait --timeout=5m --for=condition=complete job/rustic-k8s-backup-job -n testpv
+          kubectl logs -n testpv job/rustic-k8s-backup-job | tee logs.txt
+          saved_snapshot=$(grep "^snapshot " logs.txt | sed -E 's/^[^ ]* ([0-9a-fA-F]+) .*$/\1/g' | head -n 1)
+          rm logs.txt && echo "Saved snapshot: $saved_snapshot"
+          kubectl delete job rustic-k8s-backup-job -n testpv
+
+      - name: Let the app run for a bit and print the logs
+        run: |
+          sleep 10
+          kubectl logs -n testpv -l app=testpv --tail 100
+
+      - name: Force a restore of the PV now (to the backup we just made)
+        run: |
+          kubectl create job -n testpv --from=cronjob/rustic-k8s-backup-cron-job rustic-k8s-backup-job-restore --dry-run=client -o "json" \
+            | jq ".spec.template.spec.containers[0].env += [{ \"name\": \"rustic_cmd\", value:\"restore --delete --verify-existing $saved_snapshot /data\" }]" \
+            | kubectl apply -f -
+          kubectl wait --timeout=5m --for=condition=complete job/rustic-k8s-backup-job-restore -n testpv
+          kubectl logs -n testpv job/rustic-k8s-backup-job-restore
+          kubectl delete job rustic-k8s-backup-job-restore -n testpv
+
+      - name: Print the logs again (should have gone back to the past!)
+        run: |
+          kubectl logs -n testpv -l app=testpv --tail 100
+
+
+
