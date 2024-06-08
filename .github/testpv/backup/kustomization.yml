@@ -11,7 +11,7 @@ configMapGenerator:
     behavior: create
     literals:
       # Repository configuration
-      - rustic_cmd=backup --init ./
+      - rustic_cmd=backup --init --host homelab --label testpv --tag testpv --set-compression 3 ./
       - RUSTIC_REPOSITORY=local:/backup
       # Auto-scaling configuration
       - resource_kind=statefulset
