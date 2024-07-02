@@ -23,7 +23,9 @@ jobs:
       - name: Start the testpv app, which will write to a new PersistentVolume (PV)
         run: |
           kubectl apply -k .github/testpv
-          kubectl wait --timeout=5m --for=condition=ready pod -l app=testpv -n testpv
+          while ! kubectl wait --timeout=5m --for=condition=ready pod -l app=testpv -n testpv; do
+            sleep 1 # Wait for the pod to exist
+          done
 
       - name: Force a backup of the PV now
         run: |
