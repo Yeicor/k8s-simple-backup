@@ -23,15 +23,15 @@ jobs:
       - name: Start the testpv app, which will write to a new PersistentVolume (PV)
         run: |
           kubectl apply -k .github/testpv
+          echo "Waiting for the app to be ready..."
           while ! kubectl wait --timeout=5m --for=condition=ready pod -l app=testpv -n testpv; do
-            sleep 1 # Wait for the pod to exist
+            sleep 1 # Wait for the pod to exist if wait fails
           done
 
       - name: Force a backup of the PV now
         run: |
           kubectl create job --from=cronjob/k8s-simple-backup-cron-job -n testpv k8s-simple-backup-job
-          # Wait for the job to start and stream the logs
-          kubectl logs -f -n testpv job/k8s-simple-backup-job | tee logs.txt &
+          kubectl logs -f --all-containers=true -n testpv job/k8s-simple-backup-job | tee logs.txt &
           kubectl wait --timeout=5m --for=condition=complete job/k8s-simple-backup-job -n testpv
           saved_snapshot=$(grep "^snapshot " logs.txt | sed -E 's/^[^ ]* ([0-9a-fA-F]+) .*$/\1/g' | head -n 1)
           rm logs.txt && echo "saved_snapshot=$saved_snapshot" | tee /dev/stderr >> $GITHUB_ENV
