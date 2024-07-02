@@ -19,6 +19,7 @@ spec:
                 - /bin/sh
                 - -c
                 - |
+                  set -e # Exit immediately on error
                   if [ -z "$resource_kind" ] || [ -z "$resource_name" ] || [ -z "$namespace" ]; then
                     echo "Backing up this persistent volume without scaling down any resource."
                     exit 0
@@ -27,20 +28,21 @@ spec:
                   kubectl get -n $namespace $resource_kind/$resource_name -o jsonpath='{.spec.replicas}' > /tmp/replicas
                   echo "Scaling down $resource_kind/$resource_name from $(cat /tmp/replicas) to 0 replicas..."
                   kubectl scale -n $namespace $resource_kind/$resource_name --replicas=0
-                  ok="no"
+                  err_code="1"
                   for i in $(seq 1 $scale_down_timeout); do
                     if [ "$(kubectl get -n $namespace $resource_kind/$resource_name -o jsonpath='{.status.availableReplicas}')" -eq "0" ]; then
-                      ok="yes"
+                      err_code="0"
                       break
                     fi
                     echo "Waiting for $resource_kind/$resource_name to scale down to 0 available replicas..."
                     sleep 1
                   done
-                  echo "Finished scaling down $resource_kind/$resource_name with result: $ok"
-                  if [ "$ok" -ne "yes" ]; then
+                  echo "Finished scaling down $resource_kind/$resource_name with err_code: $err_code"
+                  if [ "$err_code" -ne "0" ]; then
                     echo "ERROR: The $resource_kind/$resource_name did not scale down to 0 replicas."
                     exit 1
                   fi
+                  mkdir -p /tmp/backup  # Temporary local backup empty directory, for testing...
               env: # Only provide a dynamic default value
                 - &env
                   name: namespace
@@ -82,7 +84,7 @@ spec:
                 - name: ARCHIVE
                   value: "$(namespace)-$(date +'%Y-%m-%d-%H-%M-%S')"
               envFrom: *envFrom
-              securityContext: *securityContext
+              # securityContext: *securityContext  # Allow privileged read-only access to back up data
 
           containers: # At least one container is required and run last, so use it for up-scaling
             - name: k8s-simple-backup-upscale
@@ -91,6 +93,7 @@ spec:
                 - /bin/sh
                 - -c
                 - |
+                  set -e # Exit immediately on error
                   if [ -z "$resource_kind" ] || [ -z "$resource_name" ] || [ -z "$namespace" ]; then
                     echo "Backing up this persistent volume without scaling down any resource."
                     exit 0
@@ -106,17 +109,17 @@ spec:
                   replicas_to_restore=$(cat /tmp/replicas)
                   echo "Scaling up $resource_kind/$resource_name from 0 to $replicas_to_restore replicas..."
                   kubectl scale -n $namespace $resource_kind/$resource_name --replicas=$replicas_to_restore
-                  ok="no"
+                  err_code="1"
                   for i in $(seq 1 $scale_up_timeout); do
                     if [ "$(kubectl get -n $namespace $resource_kind/$resource_name -o jsonpath='{.status.availableReplicas}')" -eq "$replicas_to_restore" ]; then
-                      ok="yes"
+                      err_code="0"
                       break
                     fi
                     echo "Waiting for $resource_kind/$resource_name to scale up to $replicas_to_restore available replicas..."
                     sleep 1
                   done
-                  echo "Finished scaling up $resource_kind/$resource_name with result: $ok"
-                  if [ "$ok" -ne "yes" ]; then
+                  echo "Finished scaling up $resource_kind/$resource_name with err_code: $err_code"
+                  if [ "$err_code" -ne "0" ]; then
                       echo "ERROR: The $resource_kind/$resource_name did not scale up to $replicas_to_restore replicas."
                       exit 1
                   fi
