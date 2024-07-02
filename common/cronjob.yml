@@ -52,7 +52,6 @@ spec:
               envFrom: &envFrom
                 - configMapRef:
                     name: k8s-simple-backup-configmap-env
-                    optional: true
                 - secretRef: # Can override the configMap values
                     name: k8s-simple-backup-secret-env
                     optional: true
@@ -79,10 +78,7 @@ spec:
                   readOnly: true
                 - mountPath: /tmp
                   name: tmp
-              env:
-                - *env
-                - name: ARCHIVE
-                  value: "$(namespace)-$(date +'%Y-%m-%d-%H-%M-%S')"
+              env: [ *env ]
               envFrom: *envFrom
               # securityContext: *securityContext  # Allow privileged read-only access to back up data
 

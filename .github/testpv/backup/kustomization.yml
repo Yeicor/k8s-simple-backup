@@ -30,6 +30,10 @@ patches:
       - op: replace
         path: /spec/jobTemplate/spec/template/spec/volumes/0/persistentVolumeClaim/claimName
         value: testpv-pvc
+      # Give a custom hostname to help identify the backups
+      - op: replace
+        path: /spec/jobTemplate/spec/template/spec/hostname
+        value: testpv
       # Add another persistent volume for the local backup (this is not required for remote backups)
       - op: add
         path: /spec/jobTemplate/spec/template/spec/volumes/-

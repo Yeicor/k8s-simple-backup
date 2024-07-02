@@ -6,10 +6,22 @@ data:
   # KUBECTL
   scale_down_timeout: "30"  # Wait up to X seconds for the pods to scale down
   scale_up_timeout: "30"  # Wait up to X seconds for the pods to scale up
+
   # BACKUP (BORG)
   BORG_REPO: "/tmp/backup"  # Change this to the actual path to the repository
   BORG_PASSPHRASE: "your-secret-key"  # Use a secret instead!
   BACKUP_DIRS: "/data/"  # Mount the volume to /data (or several volumes to subdirectories)
   COMPRESSION: "auto,zstd,3"  # Compression algorithm and level
-  PRUNE: "0"  # Keep all backups (it is recommended to run a single prune job periodically per repository)
   # EXCLUDE: "/data/...;/data/..."  # Optionally exclude files from the backup
+  # DEBUG: "1"
+  # ...
+
+  # PRUNE (BORG)
+  PRUNE: "0"  # Keep all backups (it is recommended to run a single prune job periodically per repository)
+  KEEP_DAILY: "7"  # Keep the last X daily backups
+  KEEP_WEEKLY: "4"  # Keep the last X weekly backups
+  KEEP_MONTHLY: "6"  # Keep the last X monthly backups
+
+  # RESTORE (BORG)
+  # EXTRACT_TO: "ARCHIVE_NAME"  # Extract the selected archive (choose an archive using something like `borg list`)
+  # EXTRACT_WHAT: ""  # Extract the entire backup or a specific directory

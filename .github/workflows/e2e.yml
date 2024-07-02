@@ -31,9 +31,9 @@ jobs:
       - name: Force a backup of the PV now
         run: |
           kubectl create job --from=cronjob/k8s-simple-backup-cron-job -n testpv k8s-simple-backup-job
-          kubectl logs -f --all-containers=true -n testpv job/k8s-simple-backup-job | tee logs.txt &
           kubectl wait --timeout=5m --for=condition=complete job/k8s-simple-backup-job -n testpv
-          saved_snapshot=$(grep "^snapshot " logs.txt | sed -E 's/^[^ ]* ([0-9a-fA-F]+) .*$/\1/g' | head -n 1)
+          kubectl logs -f --all-containers=true -n testpv job/k8s-simple-backup-job | tee logs.txt
+          saved_snapshot=$(grep "^Archive name: " logs.txt | sed -E 's/Archive name: //g' | head -n 1)
           rm logs.txt && echo "saved_snapshot=$saved_snapshot" | tee /dev/stderr >> $GITHUB_ENV
           kubectl delete job k8s-simple-backup-job -n testpv
 
@@ -45,7 +45,7 @@ jobs:
       - name: Force a restore of the PV now (to the backup we just made)
         run: |
           kubectl create job -n testpv --from=cronjob/k8s-simple-backup-cron-job k8s-simple-backup-job-restore --dry-run=client -o "json" \
-            | jq ".spec.template.spec.containers[0].env += [{ \"name\": \"rustic_cmd\", value:\"restore --delete --verify-existing $saved_snapshot ./\" }]" \
+            | jq ".spec.template.spec.initContainers[1].env += [{ \"name\": \"EXTRACT_TO\", value:\"$saved_snapshot\" }]" \
             | kubectl apply -f -
           kubectl wait --timeout=5m --for=condition=complete job/k8s-simple-backup-job-restore -n testpv
           kubectl logs -n testpv job/k8s-simple-backup-job-restore
