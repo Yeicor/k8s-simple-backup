@@ -7,16 +7,15 @@ resources:
   - ../backup
 
 configMapGenerator:
-  - name: rustic-configmap-env
+  - name: k8s-simple-backup-configmap-env
     behavior: merge
     literals:
-      # Repository configuration
-      - rustic_cmd=forget --prune
+      - PRUNE=1
 
 patches:
   - target:
       kind: CronJob
-      name: rustic-k8s-backup-cron-job  # Before applying the -forget suffix
+      name: k8s-simple-backup-cron-job  # Before applying the -forget suffix
       version: v1
       group: batch
     patch: |-

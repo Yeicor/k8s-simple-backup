@@ -1,0 +1,11 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: k8s-simple-backup-configmap-env
+data:
+  BORG_REPO: "/tmp"  # Change this to the actual path to the repository
+  BORG_PASSPHRASE: "your-secret-key"  # Use a secret instead!
+  BACKUP_DIRS: "/data/"  # Mount the volume to /data (or several volumes to subdirectories)
+  COMPRESSION: "auto,zstd,3"  # Compression algorithm and level
+  PRUNE: "0"  # Keep all backups (it is recommended to run a single prune job periodically per repository)
+  # EXCLUDE: "/data/...;/data/..."  # Optionally exclude files from the backup

@@ -4,39 +4,32 @@ namespace: testpv  # Same namespace as the app
 
 resources:
   - ../../../common
-  - claim.yml
+  - backup-pvc.yml
 
 configMapGenerator:
-  - name: rustic-configmap-env
-    behavior: create
+  - name: k8s-simple-backup-configmap-env
+    behavior: merge
     literals:
-      # Repository configuration
-      - rustic_cmd=backup --init --host homelab --label testpv --tag testpv --set-compression 3 ./
-      - RUSTIC_REPOSITORY=local:/backup
-      # Auto-scaling configuration
-      - resource_kind=statefulset
+      - resource_kind=StatefulSet
       - resource_name=testpv
-      - namespace=testpv
 
+# Remember to provide the secret key in a secure way!
 secretGenerator:
-  - name: rustic-secret-env
+  - name: k8s-simple-backup-secret-env
     literals:
-      # Repository configuration
-      - RUSTIC_PASSWORD="DoNotUseThisPassword"
+      - BORG_PASSPHRASE=DO_NOT_USE_THIS_KEY
 
 patches:
   - target:
       kind: CronJob
-      name: rustic-k8s-backup-cron-job
+      name: k8s-simple-backup-cron-job
       version: v1
       group: batch
     patch: |-
+      # Provide the PVC name to back up
       - op: replace
         path: /spec/jobTemplate/spec/template/spec/volumes/0/persistentVolumeClaim/claimName
         value: testpv-pvc
-      - op: replace
-        path: /spec/suspend
-        value: false
       # Add another persistent volume for the local backup (this is not required for remote backups)
       - op: add
         path: /spec/jobTemplate/spec/template/spec/volumes/-
