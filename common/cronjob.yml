@@ -42,7 +42,6 @@ spec:
                     echo "ERROR: The $resource_kind/$resource_name did not scale down to 0 replicas."
                     exit 1
                   fi
-                  mkdir -p /tmp/backup  # Temporary local backup empty directory, for testing...
               env: # Only provide a dynamic default value
                 - &env
                   name: namespace

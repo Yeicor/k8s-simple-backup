@@ -17,6 +17,7 @@ configMapGenerator:
 secretGenerator:
   - name: k8s-simple-backup-secret-env
     literals:
+      - BORG_REPO=/backup/
       - BORG_PASSPHRASE=DO_NOT_USE_THIS_KEY
 
 patches:
@@ -42,7 +43,7 @@ patches:
           persistentVolumeClaim:
             claimName: testpv-backup-pvc
       - op: add
-        path: /spec/jobTemplate/spec/template/spec/containers/0/volumeMounts/-
+        path: /spec/jobTemplate/spec/template/spec/initContainers/1/volumeMounts/-
         value:
           mountPath: /backup
           name: backup
