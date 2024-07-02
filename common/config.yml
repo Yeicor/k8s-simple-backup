@@ -3,6 +3,10 @@ apiVersion: v1
 metadata:
   name: k8s-simple-backup-configmap-env
 data:
+  # KUBECTL
+  scale_down_timeout: "30"  # Wait up to X seconds for the pods to scale down
+  scale_up_timeout: "30"  # Wait up to X seconds for the pods to scale up
+  # BACKUP (BORG)
   BORG_REPO: "/tmp"  # Change this to the actual path to the repository
   BORG_PASSPHRASE: "your-secret-key"  # Use a secret instead!
   BACKUP_DIRS: "/data/"  # Mount the volume to /data (or several volumes to subdirectories)

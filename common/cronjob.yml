@@ -12,7 +12,7 @@ spec:
         spec:
           serviceAccountName: k8s-simple-backup-service-account
           restartPolicy: Never
-          initContainers:
+          initContainers: # These containers run sequentially before the main container(s) and only if they all succeed
             - name: k8s-simple-backup-downscale
               image: bitnami/kubectl:latest
               command:
@@ -38,17 +38,12 @@ spec:
                     echo "ERROR: The $resource_kind/$resource_name did not scale down to 0 replicas."
                     exit 1
                   fi
-              env:
-                - name: resource_kind
-                  value: ""
-                - name: resource_name
-                  value: ""
-                - name: namespace
+              env: # Only provide a dynamic default value
+                - &env
+                  name: namespace
                   valueFrom:
                     fieldRef:
                       fieldPath: metadata.namespace
-                - name: scale_down_timeout
-                  value: "30"
               envFrom: &envFrom
                 - configMapRef:
                     name: k8s-simple-backup-configmap-env
@@ -79,33 +74,14 @@ spec:
                   readOnly: true
                 - mountPath: /tmp
                   name: tmp
-              env: &envCommon
-                - name: resource_kind
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.jobTemplate.spec.template.spec.initContainers[0].env[0].value
-                - name: resource_name
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.jobTemplate.spec.template.spec.initContainers[0].env[1].value
-                - name: namespace
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.jobTemplate.spec.template.spec.initContainers[0].env[2].value
-                - name: scale_up_timeout
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.jobTemplate.spec.template.spec.initContainers[0].env[3].value
-                - name: pvc_name
-                  valueFrom:
-                    fieldRef:
-                      fieldPath: spec.jobTemplate.spec.template.spec.volumes[0].persistentVolumeClaim.claimName
+              env:
+                - *env
                 - name: ARCHIVE
-                  value: "$(namespace)-$(resource_kind)-$(resource_name)-$(pvc_name)-$(date +'%Y-%m-%d-%H-%M-%S')"
+                  value: "$(namespace)-$(date +'%Y-%m-%d-%H-%M-%S')"
               envFrom: *envFrom
               securityContext: *securityContext
 
-          containers: # At least one container is required
+          containers: # At least one container is required and run last, so use it for up-scaling
             - name: k8s-simple-backup-upscale
               image: bitnami/kubectl:latest
               command:
@@ -138,7 +114,7 @@ spec:
                       echo "ERROR: The $resource_kind/$resource_name did not scale up to $replicas_to_restore replicas."
                       exit 1
                   fi
-              env: *envCommon
+              env: [ *env ]
               envFrom: *envFrom
               volumeMounts: *volumeMountsKubectl
               securityContext: *securityContext
