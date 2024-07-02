@@ -23,18 +23,21 @@ spec:
                     echo "Backing up this persistent volume without scaling down any resource."
                     exit 0
                   fi
+                  echo "Saving the current number of replicas for $resource_kind/$resource_name..."
                   kubectl get -n $namespace $resource_kind/$resource_name -o jsonpath='{.spec.replicas}' > /tmp/replicas
+                  echo "Scaling down $resource_kind/$resource_name from $(cat /tmp/replicas) to 0 replicas..."
                   kubectl scale -n $namespace $resource_kind/$resource_name --replicas=0
-                  ok="0"
+                  ok="no"
                   for i in $(seq 1 $scale_down_timeout); do
                     if [ "$(kubectl get -n $namespace $resource_kind/$resource_name -o jsonpath='{.status.availableReplicas}')" -eq "0" ]; then
-                      ok="1"
+                      ok="yes"
                       break
                     fi
                     echo "Waiting for $resource_kind/$resource_name to scale down to 0 available replicas..."
                     sleep 1
                   done
-                  if [ "$ok" -ne "1" ]; then
+                  echo "Finished scaling down $resource_kind/$resource_name with result: $ok"
+                  if [ "$ok" -ne "yes" ]; then
                     echo "ERROR: The $resource_kind/$resource_name did not scale down to 0 replicas."
                     exit 1
                   fi
@@ -92,6 +95,7 @@ spec:
                     echo "Backing up this persistent volume without scaling down any resource."
                     exit 0
                   fi
+                  echo "Checking that $resource_kind/$resource_name is still scaled down to 0 replicas..."
                   cur_replicas=$(kubectl get -n $namespace $resource_kind/$resource_name -o jsonpath='{.spec.replicas}')
                   if [ "$cur_replicas" -ne "0" ]; then
                     echo "ERROR: The $resource_kind/$resource_name did not stay scaled down to 0 replicas."
@@ -100,17 +104,19 @@ spec:
                     exit 1
                   fi
                   replicas_to_restore=$(cat /tmp/replicas)
+                  echo "Scaling up $resource_kind/$resource_name from 0 to $replicas_to_restore replicas..."
                   kubectl scale -n $namespace $resource_kind/$resource_name --replicas=$replicas_to_restore
-                  ok="0"
+                  ok="no"
                   for i in $(seq 1 $scale_up_timeout); do
                     if [ "$(kubectl get -n $namespace $resource_kind/$resource_name -o jsonpath='{.status.availableReplicas}')" -eq "$replicas_to_restore" ]; then
-                      ok="1"
+                      ok="yes"
                       break
                     fi
                     echo "Waiting for $resource_kind/$resource_name to scale up to $replicas_to_restore available replicas..."
                     sleep 1
                   done
-                  if [ "$ok" -ne "1" ]; then
+                  echo "Finished scaling up $resource_kind/$resource_name with result: $ok"
+                  if [ "$ok" -ne "yes" ]; then
                       echo "ERROR: The $resource_kind/$resource_name did not scale up to $replicas_to_restore replicas."
                       exit 1
                   fi
