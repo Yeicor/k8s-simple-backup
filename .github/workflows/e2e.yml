@@ -68,13 +68,23 @@ jobs:
         run: |
           echo " ======== Get all resources in all namespaces ======== "
           kubectl api-resources --verbs=list --namespaced -o name \
-          | xargs -n 1 kubectl get --show-kind --ignore-not-found --all-namespaces
+          | xargs -n 1 -I {} sh -c \
+          'echo "     === {} in all namespaces === "; kubectl get --ignore-not-found --all-namespaces {}'
           
           echo " ======== Describe all resources in all namespaces ======== "
-          kubectl api-resources --verbs=list --namespaced -o name \
-          | xargs -n 1 kubectl describe --all-namespaces
+          resource_kinds=$(kubectl api-resources --verbs=list --namespaced -o name)
+          for resource_kind in $resource_kinds; do
+            echo "     === $resource_kind in all namespaces === "
+            resources=$(kubectl get --ignore-not-found --all-namespaces $resource_kind -o custom-columns='N:.metadata.name,NS:.metadata.namespace' | sed -E '1d')
+            while read -r resource; do
+              name=$(echo $resource | sed -E 's/ +/ /g' | cut -d' ' -f1)
+              namespace=$(echo $resource | sed -E 's/ +/ /g' | cut -d' ' -f2)
+              echo -e "\n       = Describe $resource_kind/$name in namespace $namespace = "
+              kubectl describe -n $namespace $resource_kind/$name
+            done <<< "$resources"
+          done
           
-          # Get all possible logs of all pods
+          echo " ======== Logs for all pods in all namespaces ======== "
           all_pods=$(kubectl get pods --all-namespaces -o custom-columns='N:.metadata.name,NS:.metadata.namespace' | tail -n +2)
           readarray -t all_pods <<< "$all_pods"
           for pod in "${all_pods[@]}"; do
