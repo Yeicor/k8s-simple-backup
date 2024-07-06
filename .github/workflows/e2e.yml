@@ -63,5 +63,25 @@ jobs:
           # Ensure that the past logs partially match the future logs
           grep -q -f future_logs.txt past_logs.txt
 
+      - name: Debug information
+        if: always()
+        run: |
+          echo " ======== Get all resources in all namespaces ======== "
+          kubectl api-resources --verbs=list --namespaced -o name \
+          | xargs -n 1 kubectl get --show-kind --ignore-not-found --all-namespaces
+          
+          echo " ======== Describe all resources in all namespaces ======== "
+          kubectl api-resources --verbs=list --namespaced -o name \
+          | xargs -n 1 kubectl describe --all-namespaces
+          
+          # Get all possible logs of all pods
+          all_pods=$(kubectl get pods --all-namespaces -o custom-columns='N:.metadata.name,NS:.metadata.namespace' | tail -n +2)
+          readarray -t all_pods <<< "$all_pods"
+          for pod in "${all_pods[@]}"; do
+            pod=($pod)
+            echo " ========== Logs for pod ${pod[0]} in namespace ${pod[1]} ========== "
+            kubectl -n "${pod[1]}" logs "${pod[0]}" --all-containers --tail=-1
+          done
+
 
 
