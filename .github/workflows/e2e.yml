@@ -34,7 +34,7 @@ jobs:
           kubectl wait --timeout=5m --for=condition=complete -n testpv job/k8s-simple-backup-job
           kubectl logs -f --all-containers=true --timestamps -n testpv job/k8s-simple-backup-job \
             | sort | sed -E 's/^[^T]+T//g;s/(:[0-9]{2}\.[0-9]{1})[^ ]+/\1/g' | tee logs.txt
-          saved_snapshot=$(grep "^Archive name: " logs.txt | sed -E 's/Archive name: //g' | head -n 1)
+          saved_snapshot=$(grep "Archive name: " logs.txt | sed -E 's/.*Archive name: //g' | head -n 1)
           if [ -z "$saved_snapshot" ]; then
             echo "ERROR: No snapshot was found in the logs:"
             cat logs.txt
