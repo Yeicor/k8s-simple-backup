@@ -51,7 +51,7 @@ jobs:
       - name: Force a restore of the PV now (to the backup we just made)
         run: |
           kubectl create job -n testpv --from=cronjob/k8s-simple-backup-cron-job k8s-simple-backup-job-restore --dry-run=client -o "json" \
-            | jq ".spec.template.spec.initContainers[1].env += [{ \"name\": \"ARCHIVE\", value:\"$saved_snapshot\" }, { \"name\": \"DEBUG\", value:\"1\" }]" \
+            | jq ".spec.template.spec.initContainers[1].env += [{ \"name\": \"ARCHIVE\", value:\"$saved_snapshot\" }, { \"name\": \"EXTRACT_TO\", value:\"/\" }, { \"name\": \"DEBUG\", value:\"1\" }]" \
             | kubectl apply -f -
           kubectl wait --timeout=5m --for=condition=complete -n testpv job/k8s-simple-backup-job-restore
           kubectl logs -f --all-containers=true --timestamps -n testpv job/k8s-simple-backup-job-restore \
