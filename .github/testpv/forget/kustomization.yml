@@ -7,7 +7,7 @@ resources:
   - ../backup
 
 configMapGenerator:
-  - name: k8s-simple-backup-configmap-env
+  - name: k8s-simple-backup-configmap-env  # Before applying the -forget suffix
     behavior: merge
     literals:
       - PRUNE=1
