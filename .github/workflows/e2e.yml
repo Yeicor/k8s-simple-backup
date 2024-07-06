@@ -31,9 +31,8 @@ jobs:
       - name: Force a backup of the PV now
         run: |
           kubectl create job --from=cronjob/k8s-simple-backup-cron-job -n testpv k8s-simple-backup-job
-          pod_name=$(kubectl get pods -n testpv -l job-name=k8s-simple-backup-job -o jsonpath='{.items[0].metadata.name}')
-          kubectl wait --timeout=5m --for=condition=complete job/k8s-simple-backup-job -n testpv
-          kubectl logs -f --all-containers=true -n testpv $pod_name | tee logs.txt
+          kubectl wait --timeout=5m --for=condition=complete -n testpv job/k8s-simple-backup-job
+          kubectl logs -f --all-containers=true -n testpv job/k8s-simple-backup-job | tee logs.txt
           saved_snapshot=$(grep "^Archive name: " logs.txt | sed -E 's/Archive name: //g' | head -n 1)
           if [ -z "$saved_snapshot" ]; then
             echo "ERROR: No snapshot was found in the logs:"
@@ -41,7 +40,7 @@ jobs:
             exit 1
           fi
           rm logs.txt && echo "saved_snapshot=$saved_snapshot" | tee /dev/stderr >> $GITHUB_ENV
-          kubectl delete job k8s-simple-backup-job -n testpv
+          kubectl delete job -n testpv k8s-simple-backup-job
 
       - name: Let the app run for a bit and print the logs
         run: |
@@ -53,9 +52,9 @@ jobs:
           kubectl create job -n testpv --from=cronjob/k8s-simple-backup-cron-job k8s-simple-backup-job-restore --dry-run=client -o "json" \
             | jq ".spec.template.spec.initContainers[1].env += [{ \"name\": \"EXTRACT_TO\", value:\"$saved_snapshot\" }]" \
             | kubectl apply -f -
-          kubectl wait --timeout=5m --for=condition=complete job/k8s-simple-backup-job-restore -n testpv
+          kubectl wait --timeout=5m --for=condition=complete -n testpv job/k8s-simple-backup-job-restore
           kubectl logs -f --all-containers=true -n testpv job/k8s-simple-backup-job-restore
-          kubectl delete job k8s-simple-backup-job-restore -n testpv
+          kubectl delete job -n testpv k8s-simple-backup-job-restore
 
       - name: Let the app run for a bit and print the logs (should have gone back to the past!)
         run: |
