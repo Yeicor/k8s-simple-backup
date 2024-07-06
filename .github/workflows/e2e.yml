@@ -32,7 +32,8 @@ jobs:
         run: |
           kubectl create job --from=cronjob/k8s-simple-backup-cron-job -n testpv k8s-simple-backup-job
           kubectl wait --timeout=5m --for=condition=complete -n testpv job/k8s-simple-backup-job
-          kubectl logs -f --all-containers=true -n testpv job/k8s-simple-backup-job | tee logs.txt
+          kubectl logs -f --all-containers=true --timestamps -n testpv job/k8s-simple-backup-job \
+            | sort | sed -E 's/^[^T]+T//g;s/(:[0-9]{2}\.[0-9]{1})[^ ]+/\1/g' | tee logs.txt
           saved_snapshot=$(grep "^Archive name: " logs.txt | sed -E 's/Archive name: //g' | head -n 1)
           if [ -z "$saved_snapshot" ]; then
             echo "ERROR: No snapshot was found in the logs:"
@@ -53,7 +54,8 @@ jobs:
             | jq ".spec.template.spec.initContainers[1].env += [{ \"name\": \"EXTRACT_TO\", value:\"$saved_snapshot\" }]" \
             | kubectl apply -f -
           kubectl wait --timeout=5m --for=condition=complete -n testpv job/k8s-simple-backup-job-restore
-          kubectl logs -f --all-containers=true -n testpv job/k8s-simple-backup-job-restore
+          kubectl logs -f --all-containers=true --timestamps -n testpv job/k8s-simple-backup-job-restore \
+            | sort | sed -E 's/^[^T]+T//g;s/(:[0-9]{2}\.[0-9]{1})[^ ]+/\1/g'
           kubectl delete job -n testpv k8s-simple-backup-job-restore
 
       - name: Let the app run for a bit and print the logs (should have gone back to the past!)
@@ -93,10 +95,12 @@ jobs:
             for resource in "${all_resources[@]}"; do
               resource=($resource)
               echo " ========== Previous logs for $resource_kind_with_logs ${resource[0]} in namespace ${resource[1]} ========== "
-              kubectl -n "${resource[1]}" logs "${resource[0]}" --previous --all-containers=true --tail=-1 || \
+              kubectl -n "${resource[1]}" logs "${resource[0]}" --previous --all-containers=true --tail=-1 --timestamps \
+                | sort | sed -E 's/^[^T]+T//g;s/(:[0-9]{2}\.[0-9]{1})[^ ]+/\1/g' || \
                 echo "Failed to get PREVIOUS logs for $resource_kind_with_logs ${resource[0]} in namespace ${resource[1]}"
               echo " ========== Logs for $resource_kind_with_logs ${resource[0]} in namespace ${resource[1]} ========== "
-              kubectl -n "${resource[1]}" logs "${resource[0]}" --all-containers=true --tail=-1 || \
+              kubectl -n "${resource[1]}" logs "${resource[0]}" --all-containers=true --tail=-1 --timestamps \
+                | sort | sed -E 's/^[^T]+T//g;s/(:[0-9]{2}\.[0-9]{1})[^ ]+/\1/g' || \
                 echo "Failed to get logs for $resource_kind_with_logs ${resource[0]} in namespace ${resource[1]}"
             done
           done
