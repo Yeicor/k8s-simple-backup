@@ -75,7 +75,7 @@ spec:
               volumeMounts:
                 - mountPath: /data
                   name: data
-                  readOnly: true
+                  # readOnly: true  # Need to write for restores that reuse this container
                 - mountPath: /tmp
                   name: tmp
               env: [ *env ]
