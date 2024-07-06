@@ -4,8 +4,8 @@ metadata:
   name: k8s-simple-backup-configmap-env
 data:
   # KUBECTL
-  scale_down_timeout: "30"  # Wait up to X seconds for the pods to scale down
-  scale_up_timeout: "30"  # Wait up to X seconds for the pods to scale up
+  scale_down_timeout: "300"  # Wait up to X seconds for the pods to scale down
+  scale_up_timeout: "300"  # Wait up to X seconds for the pods to scale up
 
   # BACKUP (BORG)
   # BORG_REPO: "/tmp/backup"  # Set this to the actual path/url to the repository
