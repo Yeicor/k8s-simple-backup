@@ -23,5 +23,6 @@ data:
   KEEP_MONTHLY: "6"  # Keep the last X monthly backups
 
   # RESTORE (BORG)
-  # EXTRACT_TO: "ARCHIVE_NAME"  # Extract the selected archive (choose an archive using something like `borg list`)
+  # ARCHIVE: "ArchiveName"  # Extract the selected archive (choose an archive using something like `borg list`)
+  # EXTRACT_TO: "/"  # Extract to the root always, as the same filesystem is used
   # EXTRACT_WHAT: ""  # Extract the entire backup or a specific directory
