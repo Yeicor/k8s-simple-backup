@@ -10,7 +10,7 @@ patches.
 
 ## Example
 
-- [backup/kustomization.yml](./.github/testpv/backup/kustomization.yml): create one for each backed up PV.
-- [forget/kustomization.yml](./.github/testpv/forget/kustomization.yml): create one for each back up destination.
+- [backup/kustomization.yml](./.github/testpv/backup/kustomization.yml): create one for each backed up PV (will also
+  prune as needed and check integrity).
 - To restore a backup, you need to specify a snapshot, review the [end to end test](./.github/workflows/e2e.yml).
 

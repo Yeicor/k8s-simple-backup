@@ -78,7 +78,12 @@ spec:
                   # readOnly: true  # Need to write for restores that reuse this container
                 - mountPath: /tmp
                   name: tmp
-              env: [ *env ]
+              env:
+                - *env
+                - name: PRUNE_PREFIX
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
               envFrom: *envFrom
               # securityContext: *securityContext  # Allow privileged read-only access to back up data
 

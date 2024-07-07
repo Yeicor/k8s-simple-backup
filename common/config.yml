@@ -17,12 +17,13 @@ data:
   # ...
 
   # PRUNE (BORG)
-  PRUNE: "0"  # Keep all backups (it is recommended to run a single prune job periodically per repository)
+  PRUNE: "1"  # Prune backups matching prefix (which defaults to ${namespace}) according to policy (see below)
+  PRUNE_PREFIX: "automatic!"  # Prefix for the backups to maybe prune
   KEEP_DAILY: "7"  # Keep the last X daily backups
   KEEP_WEEKLY: "4"  # Keep the last X weekly backups
   KEEP_MONTHLY: "6"  # Keep the last X monthly backups
 
   # RESTORE (BORG)
-  # EXTRACT_TO: "/"  # Must be set to enable restoring. Extract to the root always, as the same filesystem is used
+  # EXTRACT_TO: "/"  # Must be set to enable restore mode. Extract to the root always, as the same filesystem is used
   # ARCHIVE: "ArchiveName"  # Extract the selected archive (choose an archive using something like `borg list`)
   # EXTRACT_WHAT: ""  # Extract the entire backup or a specific directory
